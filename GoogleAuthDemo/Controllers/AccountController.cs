@@ -62,13 +62,6 @@ namespace GoogleAuthDemo.Controllers
         [HttpGet("/signin-with-google")]
         public IActionResult SignInWithGoogle()
         {
-            //// Generate a random state parameter
-            //string state = Guid.NewGuid().ToString();
-
-            //// Store the state in the session to validate it later
-            //HttpContext.Session.SetString("OAuthState", state);
-
-
             string response_type = "code";
             string client_id = "197067534110-m8n9bnebbkpf1hacu2oje6ekvj0ckfas.apps.googleusercontent.com";
             string scope = "openid https://www.googleapis.com/auth/userinfo.email ";
@@ -81,8 +74,9 @@ namespace GoogleAuthDemo.Controllers
                          $"client_id={client_id}&" +
                          $"scope={scope}&" +
                          $"redirect_uri={redirect_uri}&" +
-                         $"nonce={UrlEncoder.Default.Encode(nonce)}";
-            //$"state={UrlEncoder.Default.Encode(state)}";
+                         $"nonce={UrlEncoder.Default.Encode(nonce)}&" +
+                         $"access_type=offline&" + // Request for offline access to get a refresh token
+                         $"prompt=consent";
 
             return Redirect(url);
         }

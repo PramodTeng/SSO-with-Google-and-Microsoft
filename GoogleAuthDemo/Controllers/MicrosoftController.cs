@@ -19,7 +19,7 @@ namespace GoogleAuthDemo.Controllers
             var dicData = new Dictionary<string, string>
             {
                 { "client_id", "65891a3d-bcc4-47af-beb2-6cff844ce15d" },
-                { "scope", "api://65891a3d-bcc4-47af-beb2-6cff844ce15d/openid api://65891a3d-bcc4-47af-beb2-6cff844ce15d/Forecast.Read" },
+                { "scope", "openid email profile User.Read offline_access" },
                 { "code", code },
                 { "redirect_uri", "https://localhost:7017/Microsoft/getAccessToken" },        
                 { "grant_type", "authorization_code" },
@@ -70,7 +70,7 @@ namespace GoogleAuthDemo.Controllers
 
             string response_type = "code id_token";
             string client_id = "65891a3d-bcc4-47af-beb2-6cff844ce15d";
-            string scope = "api://65891a3d-bcc4-47af-beb2-6cff844ce15d/openid api://65891a3d-bcc4-47af-beb2-6cff844ce15d/Forecast.Read";
+            string scope = "openid email profile User.Read offline_access";
             string redirect_uri = UrlEncoder.Default.Encode("https://localhost:7017/Microsoft/getAccessToken");
             string nonce = "Q2k4UWFtMmZ1NjlBNG1oRU1ENnNNRGhx";
             string response_mode = "form_post";
@@ -96,7 +96,51 @@ namespace GoogleAuthDemo.Controllers
 
             return Redirect(url);
         }
-        private string GenerateCodeChallenge(string codeVerifier)
+
+        [HttpPost("RefreshToken")]
+        public async Task<IActionResult> RenewAccessToken([FromBody] string refreshToken)
+        {
+            string url = "https://login.microsoftonline.com/9cf1f232-1797-4931-be76-52c9187f29cd/oauth2/v2.0/token";
+
+            var dicData = new Dictionary<string, string>
+            {
+
+                {"client_id", "65891a3d-bcc4-47af-beb2-6cff844ce15d" },
+                {"scope", "api://65891a3d-bcc4-47af-beb2-6cff844ce15d/openid api://65891a3d-bcc4-47af-beb2-6cff844ce15d/Forecast.Read api://65891a3d-bcc4-47af-beb2-6cff844ce15d/offline_access" },
+                {"refresh_token", refreshToken},
+                {"grant_type","refresh_token" },
+                {"client_secret", "pYe8Q~syS2YMHptU3IqWQYTCHQbrpankvBekTcgO" },
+
+            };
+            try
+            {
+                using (var client = new HttpClient())
+                using(var content = new FormUrlEncodedContent(dicData))
+                {
+
+                    HttpResponseMessage response = await client.PostAsync(url, content);
+                    string json = await response.Content.ReadAsStringAsync();
+
+                    var tokenResponse = JsonConvert.DeserializeObject<OAuthTokenResponse>(json);
+                    if(tokenResponse.IsSuccess)
+                    {
+                        return Ok(new { tokenResponse.access_token, tokenResponse.expires_in });
+                    }
+                    else
+                    {
+                        return BadRequest(new { tokenResponse.error, tokenResponse.error_description });
+                    }
+                }
+            }
+            catch(Exception ex)
+            {
+                return StatusCode(500, new { Message = "An error occurred while renewing the access token.", Details = ex.Message });
+             
+            }
+
+        }
+
+    private string GenerateCodeChallenge(string codeVerifier)
         {
             using (var sha256 = SHA256.Create())
             {
@@ -104,5 +148,6 @@ namespace GoogleAuthDemo.Controllers
                 return Convert.ToBase64String(challengeBytes).TrimEnd('=').Replace('+', '-').Replace('/', '_');
             }
         }
-    }
+}
+
 }
